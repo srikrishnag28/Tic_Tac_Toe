@@ -99,6 +99,29 @@
         .b-right {
             border-right: 3px solid;
         }
+        .swal2-popup {
+            background-color: #333 !important;
+            color: #fff !important;
+        }
+
+        .swal2-title {
+            color: #fff !important;
+        }
+
+        .swal2-content {
+            color: #fff !important;
+        }
+
+        .swal2-actions button {
+            background-color: #4CAF50 !important;
+            color: #fff !important;
+        }
+
+        .swal2-styled:focus {
+            box-shadow: none !important;
+            outline: none !important;
+        }
+
     </style>
 </head>
 <body>
@@ -123,7 +146,7 @@
             <p id="turn"></p>
         </div>
     </div>
-    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         let playerLetter = ""
         const boxes = document.getElementsByClassName("box")
@@ -211,7 +234,7 @@
                 else
                     playerLetter = "0"
                 resetBoard()
-                swal.close()
+                Swal.close()
             }
             else if(data.event == "boardData_send"){
                 board = data.board
@@ -220,43 +243,52 @@
                 turn.innerHTML = myTurn? "Your Turn": "Opponent's Turn"
             }
             else if(data.event == "winner"){
-                resetBoard()
-                swal({
-                  title: data.win == true ? "You Won!!" : "You Lost!!",
-                    text: data.win == true ? "Congratulations, you won!" : "Sorry, you lost.",
-                    icon: data.win == true ? "success" : "error",
-                    button: "Restart",
+                Swal.fire({
+                    title: data.win ? "You Won!!" : "You Lost!!",
+                    text: data.win ? "Congratulations, you won!" : "Sorry, you lost.",
+                    icon: data.win ? "success" : "error",
                     timer: 3000,
-                }).then(e => ws.send(JSON.stringify({
-                        event: "restart",
-                        board: board
-                    })))
+                    showConfirmButton: true,
+                    confirmButtonText: "Restart",
+                    allowOutsideClick: false
+                }).then((result) => {
+                    if (result.dismiss === Swal.DismissReason.timer) {
+                        ws.send(JSON.stringify({
+                            event: "restart",
+                            board: board
+                        }));
+                        resetBoard();
+                    }
+                });
             }
             else if(data.event == "draw"){
-                resetBoard()
-                swal({
+                Swal.fire({
                     title: "Draw!!",
                     text: "No one won!!",
-                    icon: "info",
+                    icon: "error",
                     timer: 3000,
-                    buttons: {
-                        restart: "Restart",
-                        leave: "Leave"
-                    },
-                }).then(e => ws.send(JSON.stringify({
-                        event: "restart",
-                        board: board
-                    })))
-            }
-            else if(data.event == "player_left"){
+                    showConfirmButton: true,
+                    confirmButtonText: "Restart",
+                    allowOutsideClick: false
+                }).then((result) => {
+                    if (result.dismiss === Swal.DismissReason.timer) {
+                        ws.send(JSON.stringify({
+                            event: "restart",
+                            board: board
+                        }));
+                        resetBoard();
+                    }
+                });
                 resetBoard()
-                swal({
-                    title: "Player left!!",
-                    text: data.opp + "left the game!!",
-                    icon: "info",
-                    button: "Leave",
-                    timer: 3000,
-                }).then(e => window.location = '/')
+            }
+            else if(data.event == "player_left" || data.event == "waiting"){
+                Swal.fire({
+                  title: "Waiting",
+                  text: "Waiting for opponent!!",
+                  icon: "question",
+                  showConfirmButton: false,
+                  allowOutsideClick: false,
+                });
             }
         }
         ws.onclose = function(e){

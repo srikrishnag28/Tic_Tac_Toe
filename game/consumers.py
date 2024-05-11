@@ -45,6 +45,16 @@ class GameConsumer(AsyncWebsocketConsumer):
                         'opp': oppName
                     }
                 })
+        elif len(group_channels) == 1:
+            for i, channel_name_with_name in enumerate(group_channels):
+                channel_name, player_name = channel_name_with_name.split("_", 1)
+                await self.channel_layer.send(channel_name, {
+                    'type': 'waiting',
+                    'data': {
+                        'event': 'waiting',
+                    }
+                })
+
         print(f"WebSocket connection established for group {self.group_name}")
         await self.accept()
 
@@ -135,4 +145,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         await self.send(json.dumps(context['data']))
 
     async def player_left(self, context):
+        await self.send(json.dumps(context['data']))
+
+    async def waiting(self, context):
         await self.send(json.dumps(context['data']))
