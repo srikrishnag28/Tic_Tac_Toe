@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@500&display=swap" rel="stylesheet" />
+    <title>Home Page</title>
+    <style>
+        * {
+            font-family: "Roboto", sans-serif;
+
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {}
+
+        .details {
+            width: 45%;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0px;
+
+            display: flex;
+            min-width: 420px;
+        }
+
+        #turn {
+            text-align: center;
+            width: 100%;
+        }
+
+        .wrapper {
+            width: 100vw;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            background: #333;
+            color: #fff;
+        }
+
+        .container {
+            margin: 20px 0px;
+            width: 400px;
+            height: 400px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .child {
+            width: 33.33333%;
+            height: 33.33333%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 70px;
+            /* padding: 19px; */
+            text-transform: uppercase;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+
+        .player-letter {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transform: scale(0);
+            transition: all 0.25s ease-in-out;
+            opacity: 0;
+        }
+
+        .player-letter.active {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .b-top {
+            border-top: 3px solid;
+        }
+
+        .b-bottom {
+            border-bottom: 3px solid;
+        }
+
+        .b-left {
+            border-left: 3px solid;
+        }
+
+        .b-right {
+            border-right: 3px solid;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="details">
+            <p>{{name}} (You)</p>
+            <p>{{room_id}} (Room ID)</p>
+            <p id="opponent-txt">Opponent (waiting to join)</p>
+        </div>
+        <div class="container">
+            <div boxIndex="0" player="" class="box child box-1 b-right b-bottom"></div>
+            <div boxIndex="1" player="" class="box child box-2 b-left b-right b-bottom"></div>
+            <div boxIndex="2" player="" class="box child box-3 b-left b-bottom"></div>
+            <div boxIndex="3" player="" class="box child box-4 b-top b-right b-bottom"></div>
+            <div boxIndex="4" player="" class="box child box-5 b-top b-bottom b-right b-left"></div>
+            <div boxIndex="5" player="" class="box child box-6 b-top b-bottom b-left"></div>
+            <div boxIndex="6" player="" class="box child box-7 b-right b-top"></div>
+            <div boxIndex="7" player="" class="box child box-8 b-top b-right b-left"></div>
+            <div boxIndex="8" player="" class="box child box-9 b-top b-left"></div>
+        </div>
+        <div class="details">
+            <p id="turn"></p>
+        </div>
+    </div>
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+    <script>
+        let playerLetter = ""
+        const boxes = document.getElementsByClassName("box")
+        const turn = document.getElementById("turn")
+        const opp = document.getElementById("opponent-txt")
+
+        let board = {
+            0: '', 1: '', 2: '',
+            3: '', 4: '', 5: '',
+            6: '', 7: '', 8: '',
+        }
+        let myTurn = false
+
+        let ws = new WebSocket("ws://127.0.0.1:8000/ws/game/{{room_id}}/{{name}}")
+
+        Array.from(boxes).forEach((elm, i) => {
+            elm.addEventListener("click", e => {
+                if(myTurn && elm.innerHTML == ''){
+                    board[i] = playerLetter
+                    ws.send(JSON.stringify({
+                        event: "move_done",
+                        board: board
+                    }))
+                    addPlayerLetter(elm)
+                    myTurn = false
+                }
+                else if(myTurn){
+                    alert("Invalid box!!!!")
+                }
+                else
+                    alert("Not yot move!!")
+            })
+        })
+
+        function addPlayerLetter(elm){
+            elm.innerHTML = `<p class="player-letter ">${playerLetter}</p>`
+            elm.setAttribute("player", playerLetter)
+            setTimeout(() => {
+                elm.children[0].classList.add("active")
+            })
+        }
+
+        function resetBoard(){
+            Array.from(boxes).forEach(elm => {
+                elm.innerHTML = ``
+                elm.setAttribute("player", "")
+            })
+        }
+
+        function setBoard(){
+            Array.from(boxes).forEach((elm, i) => {
+                if(board[i] !== ''){
+                    elm.innerHTML = `<p class="player-letter ">${board[i]}</p>`
+                    elm.setAttribute("player", playerLetter)
+                    setTimeout(() => {
+                    elm.children[0].classList.add("active")
+            })
+                }
+            })
+        }
+
+        ws.onopen = function(e){
+            console.log(e)
+        }
+
+        ws.onmessage = function(e){
+            var data = JSON.parse(e.data)
+            console.log(data)
+            if(data.event == "show_error"){
+                swal({
+                  title: "Error!!",
+                  text: data.error,
+                  icon: "error",
+                  timer: 3000,
+                }).then(e => window.location = '/')
+            }
+            else if(data.event == "start_game"){
+            console.log(data)
+                board = data.board
+                myTurn = data.myTurn
+                opp.innerHTML = data.opp + "(Joined)"
+                turn.innerHTML = myTurn? "Your Turn": "Opponent's Turn"
+                if(myTurn)
+                    playerLetter = "X"
+                else
+                    playerLetter = "0"
+                resetBoard()
+                swal.close()
+            }
+            else if(data.event == "boardData_send"){
+                board = data.board
+                setBoard()
+                myTurn = data.myTurn
+                turn.innerHTML = myTurn? "Your Turn": "Opponent's Turn"
+            }
+            else if(data.event == "winner"){
+                resetBoard()
+                swal({
+                  title: data.win == true ? "You Won!!" : "You Lost!!",
+                    text: data.win == true ? "Congratulations, you won!" : "Sorry, you lost.",
+                    icon: data.win == true ? "success" : "error",
+                    button: "Restart",
+                    timer: 3000,
+                }).then(e => ws.send(JSON.stringify({
+                        event: "restart",
+                        board: board
+                    })))
+            }
+            else if(data.event == "draw"){
+                resetBoard()
+                swal({
+                    title: "Draw!!",
+                    text: "No one won!!",
+                    icon: "info",
+                    timer: 3000,
+                    buttons: {
+                        restart: "Restart",
+                        leave: "Leave"
+                    },
+                }).then(e => ws.send(JSON.stringify({
+                        event: "restart",
+                        board: board
+                    })))
+            }
+            else if(data.event == "player_left"){
+                resetBoard()
+                swal({
+                    title: "Player left!!",
+                    text: data.opp + "left the game!!",
+                    icon: "info",
+                    button: "Leave",
+                    timer: 3000,
+                }).then(e => window.location = '/')
+            }
+        }
+        ws.onclose = function(e){
+
+        }
+
+    </script>
+</body>>
+</html>
